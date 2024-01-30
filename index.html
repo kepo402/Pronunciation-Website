@@ -13,6 +13,12 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+
+      #timer {
+        font-size: 20px;
+        margin: 10px;
+        color: #333;
+      }
     }
     .header {
       width: 100%;
@@ -61,69 +67,108 @@
           Your browser does not support the audio element.
         </audio>
       </div>
+      <div id="timer">00:00</div>
       <button id="recordButton">Record</button>
       <button id="stopButton" disabled>Stop</button>
       <div id="recordingList"></div>
 
   <script>
-    let mediaRecorder;
-    let recordedChunks = [];
+  let mediaRecorder;
+  let recordedChunks = [];
+  let timerInterval = null;
+  let totalSeconds = 0;
 
-    const recordButton = document.getElementById("recordButton");
-    const stopButton = document.getElementById("stopButton");
-    const recordingList = document.getElementById("recordingList");
+  const recordButton = document.getElementById("recordButton");
+  const stopButton = document.getElementById("stopButton");
+  const recordingList = document.getElementById("recordingList");
+  const timerDisplay = document.getElementById("timer");
 
-    recordButton.addEventListener("click", startRecording);
-    stopButton.addEventListener("click", stopRecording);
+  recordButton.addEventListener("click", startRecording);
+  stopButton.addEventListener("click", stopRecording);
 
-    async function startRecording() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        recordedChunks = [];
+  async function startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorder = new MediaRecorder(stream);
+      recordedChunks = [];
+      startTimer();
 
-        mediaRecorder.ondataavailable = event => {
-          if (event.data.size > 0) {
-            recordedChunks.push(event.data);
-          }
-        };
+      mediaRecorder.ondataavailable = event => {
+        if (event.data.size > 0) {
+          recordedChunks.push(event.data);
+        }
+      };
 
-        mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
-          const audioUrl = URL.createObjectURL(audioBlob);
+      mediaRecorder.onstop = () => {
+        stopTimer();
+        const audioBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        createAudioElement(audioUrl);
+      };
 
-          const audioItem = document.createElement("div");
-          audioItem.className = 'audio-item';
+      recordButton.disabled = true;
+      stopButton.disabled = false;
 
-          const audioElement = document.createElement("audio");
-          audioElement.controls = true;
-          audioElement.src = audioUrl;
-          audioItem.appendChild(audioElement);
-
-          const deleteButton = document.createElement("button");
-          deleteButton.textContent = "Delete";
-          deleteButton.onclick = function() {
-            audioItem.remove();
-          };
-          audioItem.appendChild(deleteButton);
-
-          recordingList.appendChild(audioItem);
-        };
-
-        recordButton.disabled = true;
-        stopButton.disabled = false;
-
-        mediaRecorder.start();
-      } catch (err) {
-        console.error('Error accessing microphone:', err);
-      }
+      mediaRecorder.start();
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
     }
+  }
 
-    function stopRecording() {
-      mediaRecorder.stop();
-      recordButton.disabled = false;
-      stopButton.disabled = true;
+  function stopRecording() {
+    mediaRecorder.stop();
+    recordButton.disabled = false;
+    stopButton.disabled = true;
+  }
+
+  function startTimer() {
+    totalSeconds = 0;
+    timerDisplay.innerText = formatTime(totalSeconds);
+    timerInterval = setInterval(setTime, 1000);
+  }
+
+  function setTime() {
+    ++totalSeconds;
+    timerDisplay.innerText = formatTime(totalSeconds);
+  }
+
+  function stopTimer() {
+    clearInterval(timerInterval);
+  }
+
+  function formatTime(totalSeconds) {
+    let seconds = pad(totalSeconds % 60);
+    let minutes = pad(parseInt(totalSeconds / 60));
+    return minutes + ":" + seconds;
+  }
+
+  function pad(val) {
+    let valString = val + "";
+    if (valString.length < 2) {
+      return "0" + valString;
+    } else {
+      return valString;
     }
+  }
+
+  function createAudioElement(audioUrl) {
+    const audioItem = document.createElement("div");
+    audioItem.className = 'audio-item';
+
+    const audioElement = document.createElement("audio");
+    audioElement.controls = true;
+    audioElement.src = audioUrl;
+    audioItem.appendChild(audioElement);
+
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "Delete";
+    deleteButton.onclick = function() {
+      audioItem.remove();
+    };
+    audioItem.appendChild(deleteButton);
+
+    recordingList.appendChild(audioItem);
+  }
   </script>
 </body>
 </html>
