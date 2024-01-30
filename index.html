@@ -134,6 +134,8 @@
 
   function stopTimer() {
     clearInterval(timerInterval);
+    totalSeconds = 0;
+    timerDisplay.innerText = formatTime(totalSeconds);
   }
 
   function formatTime(totalSeconds) {
